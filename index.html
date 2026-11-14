@@ -141,7 +141,7 @@
 
     // webhook-ul din Make care spune ce ore sunt OCUPATE intr-o zi.
     // Cat timp e gol, formularul arata toate orele ca libere.
-    const URL_ORE_OCUPATE = "";
+    const URL_ORE_OCUPATE = "https://hook.eu1.make.com/31vhk9it86o9yypvi88247kwe4qhrgxs";
 
     const SERVICII = [
       { nume: "Consultație cosmetică gratuită & plan personalizat", durata: 20, pret: 0 },
@@ -215,10 +215,12 @@
         // Make raspunde cu text de forma: 15:00|60;17:30|90
         const r = await fetch(URL_ORE_OCUPATE + "?data=" + encodeURIComponent(data));
         const text = (await r.text()).trim();
-        oreOcupate = text.split(";").map(x => x.trim()).filter(x => x.includes("|")).map(x => {
-          const [ora, durata] = x.split("|");
-          return { start: inMinute(ora.replace("'", "").trim()), durata: parseInt(durata) || PAS_MINUTE };
-        });
+        oreOcupate = text.split(";").map(x => x.replace(/'/g, "").trim())
+          .filter(x => /^\d{1,2}:\d{2}\|/.test(x))          // ignora randurile fara ora
+          .map(x => {
+            const [ora, durata] = x.split("|");
+            return { start: inMinute(ora), durata: parseInt(durata) || PAS_MINUTE };
+          });
       } catch (e) {
         console.warn("Nu am putut citi orele ocupate", e);
       }
