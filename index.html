@@ -126,7 +126,7 @@
     </form>
 
     <div class="contact">
-      📍 <a href="https://www.google.com/maps/search/?api=1&query=Str.%20Drumul%20Boilor%2042%2C%20Mo%C8%99ni%C8%9Ba%20Veche%2C%20Timi%C8%99"
+      📍 <a href="https://www.google.com/maps/search/?api=1&hl=ro&query=Str.%20Drumul%20Boilor%2042%2C%20Mo%C8%99ni%C8%9Ba%20Veche%2C%20Timi%C8%99"
             target="_blank" rel="noopener">Moșnița Veche, Str. Drumul Boilor 42</a><br>
       Telefon: <a href="tel:0721224363">0721 224 363</a>
     </div>
@@ -169,6 +169,7 @@
 
     let oreOcupate = [];   // [{start: minute, durata: minute}]
     let oraAleasa = "";
+    let verificareEsuata = false;   // true daca Make nu a raspuns la orele ocupate
 
     // ---- lista de servicii ----
     SERVICII.forEach((s, i) => {
@@ -211,9 +212,11 @@
       const data = $("data_dorita").value;
       if (!data || !URL_ORE_OCUPATE) return deseneazaOre();
       $("zona-ore").innerHTML = '<div class="mesaj">Se încarcă orele disponibile…</div>';
+      verificareEsuata = false;
       try {
         // Make raspunde cu text de forma: 15:00|60;17:30|90
-        const r = await fetch(URL_ORE_OCUPATE + "?data=" + encodeURIComponent(data));
+        const r = await fetch(URL_ORE_OCUPATE + "?data=" + encodeURIComponent(data) + "&t=" + Date.now(), { cache: "no-store" });
+        if (!r.ok) throw new Error("Make a raspuns cu " + r.status);
         const text = (await r.text()).trim();
         oreOcupate = text.split(";").map(x => x.replace(/'/g, "").trim())
           .filter(x => /^\d{1,2}:\d{2}\|/.test(x))          // ignora randurile fara ora
@@ -222,6 +225,7 @@
             return { start: inMinute(ora), durata: parseInt(durata) || PAS_MINUTE };
           });
       } catch (e) {
+        verificareEsuata = true;
         console.warn("Nu am putut citi orele ocupate", e);
       }
       deseneazaOre();
@@ -255,8 +259,11 @@
         grila.appendChild(b);
       }
       zona.innerHTML = "";
+      if (verificareEsuata) {
+        zona.innerHTML = '<div class="mesaj" style="color:var(--rosu)">⚠️ Nu am putut verifica orele ocupate. Programarea va fi confirmată telefonic.</div>';
+      }
       if (!grila.children.length || !libere) {
-        zona.innerHTML = '<div class="mesaj">Nu mai sunt ore libere în această zi pentru serviciile alese. Încearcă altă zi.</div>';
+        zona.innerHTML += '<div class="mesaj">Nu mai sunt ore libere în această zi pentru serviciile alese. Încearcă altă zi.</div>';
       }
       if (grila.children.length) zona.appendChild(grila);
       if (![...grila.children].some(b => b.classList.contains("ales"))) setOra("");
