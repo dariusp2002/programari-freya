@@ -94,8 +94,8 @@
     <p class="sub">Frumusețe &amp; îngrijire, într-un singur loc</p>
     <div class="linie"><span>✦</span></div>
 
-    <!-- action = webhook-ul din Make care SALVEAZA programarea -->
-    <form id="formular" action="https://hook.eu1.make.com/raqii163m26j4v9xjqb3k5eh3cpgsts2" method="POST" novalidate>
+    <!-- action = aplicatia Apps Script care SALVEAZA programarea -->
+    <form id="formular" action="https://script.google.com/macros/s/AKfycbw_cQ7KnnKRWFj7yAam4bwUpHeae7humpA21F6irdgEvjMdjTVFAKhmJDMqvbfsyubVJQ/exec" method="POST" novalidate>
 
       <label class="camp" for="nume">Nume și prenume</label>
       <input id="nume" name="nume" type="text" required autocomplete="name">
@@ -139,9 +139,9 @@
     const PAS_MINUTE     = 30;             // din cat in cat apar orele
     const ZILE_LUCRU     = [1, 2, 3, 4, 5, 6]; // 1=Luni ... 6=Sambata, 0=Duminica
 
-    // webhook-ul din Make care spune ce ore sunt OCUPATE intr-o zi.
+    // aplicatia Apps Script care spune ce ore sunt OCUPATE intr-o zi.
     // Cat timp e gol, formularul arata toate orele ca libere.
-    const URL_ORE_OCUPATE = "https://hook.eu1.make.com/31vhk9it86o9yypvi88247kwe4qhrgxs";
+    const URL_ORE_OCUPATE = "https://script.google.com/macros/s/AKfycbw_cQ7KnnKRWFj7yAam4bwUpHeae7humpA21F6irdgEvjMdjTVFAKhmJDMqvbfsyubVJQ/exec";
 
     const SERVICII = [
       { nume: "Consultație cosmetică gratuită & plan personalizat", durata: 20, pret: 0 },
@@ -284,16 +284,34 @@
 
       $("buton").disabled = true;
       $("buton").textContent = "Se trimite…";
+      let rezultat;
       try {
-        await fetch(f.action, { method: "POST", mode: "no-cors", body: new URLSearchParams(new FormData(f)) });
+        const r = await fetch(f.action, { method: "POST", body: new URLSearchParams(new FormData(f)) });
+        rezultat = await r.json();
+      } catch (e2) {
+        rezultat = { ok: false, motiv: "retea" };
+      }
+
+      if (!rezultat.ok) {
+        $("buton").disabled = false;
+        $("buton").textContent = "Trimite programarea";
+        if (rezultat.motiv === "ocupat") {
+          err.textContent = "Ora aleasă tocmai a fost ocupată. Te rugăm să alegi altă oră.";
+          setOra("");
+          incarcaOreOcupate();
+        } else if (rezultat.motiv === "invalid") {
+          err.textContent = "Verifică datele completate și încearcă din nou.";
+        } else {
+          err.textContent = "Nu s-a putut trimite. Încearcă din nou sau sună-ne la 0721 224 363.";
+        }
+        return;
+      }
+
+      {
         const [a, l, z] = f.data_dorita.value.split("-");
         f.outerHTML = `<div class="multumim"><h2>Mulțumim, ${f.nume.value.trim().split(" ")[0]}!</h2>
           Programarea pentru <b>${z}.${l}.${a}</b>, ora <b>${oraAleasa}</b> a fost trimisă.<br>
           Te contactăm în curând pentru confirmare.</div>`;
-      } catch (e2) {
-        $("buton").disabled = false;
-        $("buton").textContent = "Trimite programarea";
-        err.textContent = "Nu s-a putut trimite. Încearcă din nou sau sună-ne la 0721 224 363.";
       }
     });
   </script>
