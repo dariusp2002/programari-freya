@@ -98,7 +98,7 @@
     <form id="formular" action="https://script.google.com/macros/s/AKfycbw_cQ7KnnKRWFj7yAam4bwUpHeae7humpA21F6irdgEvjMdjTVFAKhmJDMqvbfsyubVJQ/exec" method="POST" novalidate>
 
       <label class="camp" for="nume">Nume și prenume</label>
-      <input id="nume" name="nume" type="text" required autocomplete="name">
+      <input id="nume" name="nume" type="text" required autocomplete="name" maxlength="80">
 
       <label class="camp" for="telefon">Telefon</label>
       <input id="telefon" name="telefon" type="tel" required autocomplete="tel"
@@ -115,7 +115,12 @@
       <label class="camp">Ora dorită</label>
       <div id="zona-ore"><div class="mesaj">Alege întâi serviciile și data.</div></div>
 
-      <!-- campuri completate automat de JavaScript; numele lor ajung in Make -->
+      <!-- capcana pentru boti: oamenii nu vad campul, robotii il completeaza -->
+      <div style="position:absolute;left:-9999px" aria-hidden="true">
+        <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+      </div>
+
+      <!-- campuri completate automat de JavaScript -->
       <input type="hidden" name="ora_dorita" id="ora_dorita">
       <input type="hidden" name="serviciul_dorit" id="serviciul_dorit">
       <input type="hidden" name="durata_minute" id="durata_minute">
@@ -276,7 +281,7 @@
       e.preventDefault();
       const f = e.target, err = $("eroare");
       err.textContent = "";
-      if (!f.nume.value.trim()) return err.textContent = "Completează numele.";
+      if (!/^[\p{L}][\p{L} .'-]{1,79}$/u.test(f.nume.value.trim())) return err.textContent = "Completează numele (doar litere).";
       if (!/^\+?[0-9]{9,15}$/.test(f.telefon.value.trim())) return err.textContent = "Numărul de telefon nu este valid.";
       if (!serviciiAlese().length) return err.textContent = "Alege cel puțin un serviciu.";
       if (!f.data_dorita.value) return err.textContent = "Alege data.";
@@ -299,6 +304,12 @@
           err.textContent = "Ora aleasă tocmai a fost ocupată. Te rugăm să alegi altă oră.";
           setOra("");
           incarcaOreOcupate();
+        } else if (rezultat.motiv === "program") {
+          err.textContent = "Ora aleasă nu mai este disponibilă în programul salonului. Te rugăm să alegi alta.";
+          setOra("");
+          incarcaOreOcupate();
+        } else if (rezultat.motiv === "limita") {
+          err.textContent = "Ai deja programări în această zi. Pentru mai multe, sună-ne la 0721 224 363.";
         } else if (rezultat.motiv === "invalid") {
           err.textContent = "Verifică datele completate și încearcă din nou.";
         } else {
@@ -309,9 +320,14 @@
 
       {
         const [a, l, z] = f.data_dorita.value.split("-");
-        f.outerHTML = `<div class="multumim"><h2>Mulțumim, ${f.nume.value.trim().split(" ")[0]}!</h2>
-          Programarea pentru <b>${z}.${l}.${a}</b>, ora <b>${oraAleasa}</b> a fost trimisă.<br>
-          Te contactăm în curând pentru confirmare.</div>`;
+        const div = document.createElement("div");
+        div.className = "multumim";
+        const h2 = document.createElement("h2");
+        h2.textContent = "Mulțumim, " + f.nume.value.trim().split(" ")[0] + "!";   // textContent = fara XSS
+        const p = document.createElement("p");
+        p.textContent = `Programarea pentru ${z}.${l}.${a}, ora ${oraAleasa} a fost trimisă. Te contactăm în curând pentru confirmare.`;
+        div.append(h2, p);
+        f.replaceWith(div);
       }
     });
   </script>
